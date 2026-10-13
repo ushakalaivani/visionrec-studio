@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionRec Studio - Video & Voice Recorder with Interactive Quiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="app-header">
+    <div class="logo-group">
+      <div class="logo-icon">👁️</div>
+      <div class="logo-text">
+        <h1>VisionRec Studio</h1>
+        <span>Computer Vision & Interactive Quiz</span>
+      </div>
+    </div>
+
+    <!-- Space Navigation Tabs -->
+    <nav class="nav-tabs-group">
+      <button id="navTabStudio" class="nav-tab active">
+        <span>📹</span> Studio Recording
+      </button>
+      <button id="navTabQuiz" class="nav-tab">
+        <span>📝</span> Quiz Space (1-10)
+      </button>
+      <button id="navTabGallery" class="nav-tab">
+        <span>📁</span> Records Gallery
+      </button>
+    </nav>
+
+    <div class="header-badges">
+      <div class="badge badge-limit" title="Continuous 3-Minute Rolling Chunks (Will record continuously until you stop)">
+        ⏱️ 3:00 Rolling Limit
+      </div>
+      <div id="recordingSegmentBadge" class="badge badge-segment" style="display:none;">
+        🔁 Part 1 (3:00)
+      </div>
+      <div class="badge badge-cv">
+        ⚡ CV Active
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Area -->
+  <main class="main-container">
+    
+    <!-- SPACE 1: Camera Studio & Live Computer Vision Pipeline -->
+    <section id="studioSection" class="studio-layout">
+      <!-- Left Column: Camera Studio & Live Computer Vision Pipeline -->
+      <div class="studio-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <span>📹</span> Recording Studio
+          </h2>
+          
+          <!-- 3-Minute Circular Progress Countdown Timer -->
+          <div class="timer-gauge-container" title="Continuous 3-Minute Rolling Segment Timer">
+            <svg class="gauge-svg" viewBox="0 0 36 36">
+              <circle class="gauge-bg" cx="18" cy="18" r="14" />
+              <circle id="timerGaugeProgress" class="gauge-progress" cx="18" cy="18" r="14" />
+            </svg>
+            <span id="timerText" class="timer-text">03:00</span>
+          </div>
+        </div>
+
+        <!-- Continuous Recording Banner -->
+        <div class="info-alert-bar">
+          <span>🔄 <strong>Continuous 3m Recording:</strong> Won't stop until you click Stop! Auto-saves Part 1 (3m), continues Part 2 (3m), Part 3... even when switching to other applications.</span>
+        </div>
+
+        <!-- Video & CV Canvas Stage -->
+        <div class="stage-container">
+          <!-- Hidden raw webcam video used by Computer Vision engine -->
+          <video id="webcamVideo" autoplay playsinline muted></video>
+          <!-- Canvas where real-time Computer Vision filters, HUD, Face tracking, and Waveforms are rendered -->
+          <canvas id="cvCanvas"></canvas>
+
+          <!-- Dynamic Stage Overlays -->
+          <div class="stage-overlay">
+            <div class="overlay-top">
+              <div id="recordingPill" class="recording-pill">
+                <div class="rec-dot"></div>
+                <span>REC</span>
+              </div>
+              
+              <div class="cv-telemetry">
+                <span id="fpsDisplay">30 FPS</span>
+                <span id="motionDisplay">Motion: 0%</span>
+              </div>
+            </div>
+
+            <div class="overlay-bottom">
+              <!-- Real-time Voice Audio Visualizer -->
+              <div class="audio-vu-box">
+                <span style="font-size:0.75rem; color:var(--text-muted);">MIC</span>
+                <div class="vu-meter">
+                  <div class="vu-bar"></div>
+                  <div class="vu-bar"></div>
+                  <div class="vu-bar"></div>
+                  <div class="vu-bar"></div>
+                  <div class="vu-bar"></div>
+                  <div class="vu-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Computer Vision Filters & Controls -->
+        <div class="studio-controls">
+          <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+            Computer Vision Mode
+          </div>
+
+          <div class="cv-selector-row">
+            <button class="cv-chip active" data-filter="normal">Studio Clean</button>
+            <button class="cv-chip" data-filter="bokeh">Face Focus / Bokeh</button>
+            <button class="cv-chip" data-filter="edge">Edge Detection</button>
+            <button class="cv-chip" data-filter="night">Night Vision (Low Light)</button>
+            <button class="cv-chip" data-filter="cyberpunk">Cyberpunk Neon</button>
+            <button class="cv-chip" data-filter="mono">Monochrome High-Contrast</button>
+          </div>
+
+          <!-- Recording Title Input & Actions -->
+          <div class="action-row">
+            <input type="text" id="recordingTitle" class="title-input" placeholder="Title for recording (e.g., CV Demo, Project Update)..." maxlength="80">
+            
+            <div class="buttons-group">
+              <button id="btnMicToggle" class="btn-icon active" title="Toggle Microphone">🎙️</button>
+              <button id="btnCamToggle" class="btn-icon active" title="Toggle Camera">📷</button>
+              <button id="btnScreenToggle" class="btn-icon" title="Toggle Screen / App Window Capture">🖥️</button>
+
+              <button id="btnRecord" class="btn btn-record">
+                <span>●</span> Start Continuous Recording
+              </button>
+              <button id="btnStop" class="btn btn-stop" style="display:none;">
+                <span>⏹</span> Stop & Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Stored Records Quick Panel -->
+      <div class="gallery-section">
+        <div class="gallery-header">
+          <h2 class="card-title">
+            <span>📁</span> Stored Records
+          </h2>
+          <span id="totalRecordsCount" style="font-size:0.85rem; color:var(--text-muted);">Loading...</span>
+        </div>
+
+        <div id="recordsGrid" class="records-grid"></div>
+
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <div class="empty-state-icon">📹</div>
+          <h3 style="color:#f1f5f9; margin-bottom:0.5rem;">No recordings yet</h3>
+          <p style="font-size:0.85rem;">Hit "Start Continuous Recording" to capture video with voice (3-min rolling segments).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPACE 2: Interactive Quiz Space (1 to 10 Questions) -->
+    <section id="quizSpaceSection" class="quiz-space-container" style="display:none;">
+      
+      <!-- SUB-VIEW A: Quiz Welcome & Menu -->
+      <div id="quizStartView" class="quiz-card">
+        <div class="quiz-welcome-banner">
+          <div class="quiz-welcome-icon">🎯</div>
+          <div>
+            <h2 style="font-size:1.6rem; color:#fff; font-weight:700;">Interactive Quiz Space (1 to 10 Questions)</h2>
+            <p style="color:var(--text-muted); font-size:0.95rem; margin-top:0.35rem;">
+              Test your knowledge, save your answers, shuffle 1-10 questions in real-time, speak options with voice commands, and record your simultaneous video & voice explanation!
+            </p>
+          </div>
+        </div>
+
+        <!-- Badges / Stats -->
+        <div class="quiz-highlights-grid">
+          <div class="highlight-box">
+            <span class="hl-icon">🎲</span>
+            <div>
+              <div class="hl-title">Shuffled Order</div>
+              <div class="hl-sub">Questions 1-10 randomized every quiz</div>
+            </div>
+          </div>
+          <div class="highlight-box">
+            <span class="hl-icon">⏱️</span>
+            <div>
+              <div class="hl-title">3-Min Live Sync</div>
+              <div class="hl-sub">Record video & audio while answering</div>
+            </div>
+          </div>
+          <div class="highlight-box">
+            <span class="hl-icon">🎙️</span>
+            <div>
+              <div class="hl-title">Voice Answer Mode</div>
+              <div class="hl-sub">Say "Option A", "B", "C", "D" hands-free</div>
+            </div>
+          </div>
+          <div class="highlight-box">
+            <span class="hl-icon">💾</span>
+            <div>
+              <div class="hl-title">Save Answer Sheets</div>
+              <div class="hl-sub">Cloud storage & answer breakdown</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="quiz-actions-row">
+          <button id="btnStartShuffledQuiz" class="btn btn-primary-gradient">
+            <span>🎲</span> Start Shuffled Quiz (1-10)
+          </button>
+          <button id="btnOpenQuestionEditor" class="btn btn-secondary">
+            <span>✏️</span> Edit 1-10 Questions
+          </button>
+          <button id="btnOpenAnswerHistory" class="btn btn-secondary">
+            <span>📜</span> View Saved Answers History
+          </button>
+        </div>
+
+        <!-- Questions 1 to 10 Preview -->
+        <div style="margin-top:2rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="color:#fff; font-size:1.1rem;">📋 Questions Bank Preview (1 to 10)</h3>
+            <span id="quizTotalCountBadge" class="badge badge-cv">10 Questions</span>
+          </div>
+          <div id="quizQuestionsPreviewList" class="q-preview-grid"></div>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW B: Interactive Shuffled Quiz Arena (Play Mode) -->
+      <div id="quizPlayView" class="quiz-card" style="display:none;">
+        <!-- Top status bar -->
+        <div class="quiz-play-header">
+          <div>
+            <span id="quizQuestionStepDisplay" class="step-badge">Question 1 of 10</span>
+            <span id="quizPlayCategoryBadge" class="cat-badge">Computer Vision</span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <button id="btnVoiceAnswerToggle" class="btn-voice" title="Toggle voice command answer input">
+              🎙️ Voice Answer
+            </button>
+            <span id="quizPlayTimerDisplay" class="quiz-timer-pill">⏱️ 00:00</span>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="quiz-progress-track">
+          <div id="quizPlayProgressBar" class="quiz-progress-fill" style="width: 10%;"></div>
+        </div>
+
+        <!-- Live Question Card -->
+        <div class="question-main-box">
+          <h2 id="quizPlayQuestionText" class="question-title">Loading question...</h2>
+          <div id="quizOptionsContainer" class="options-container">
+            <!-- Rendered dynamically (A, B, C, D) -->
+          </div>
+        </div>
+
+        <!-- Feedback & Explanation Box (during play) -->
+        <div id="quizFeedbackBox" class="quiz-feedback-box" style="display:none;"></div>
+
+        <!-- Bottom Actions -->
+        <div class="quiz-play-footer">
+          <button id="btnQuitQuiz" class="btn btn-secondary">✕ Exit Quiz</button>
+          <button id="btnNextQuestion" class="btn btn-primary-gradient" disabled>
+            Next Question ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW C: Quiz Results & Detailed Answer Sheet -->
+      <div id="quizResultsView" class="quiz-card" style="display:none;">
+        <div class="results-header-box">
+          <div class="results-score-badge">
+            <span id="resultsScorePercent">0%</span>
+            <div id="resultsScoreNumber" style="font-size:0.9rem; color:var(--text-muted); font-weight:600;">0 / 10</div>
+          </div>
+          <div>
+            <h2 style="color:#fff; font-size:1.6rem; font-weight:700;">Quiz Completed!</h2>
+            <p id="resultsScoreMessage" style="font-size:1rem; margin-top:0.35rem;">Review your answers below.</p>
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.5rem;" id="resultsTimeTaken">
+              ⏱️ Time: 00:00
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="quiz-actions-row" style="margin: 1.5rem 0;">
+          <button id="btnRetakeQuiz" class="btn btn-primary-gradient">
+            <span>🔄</span> Retake Shuffled Quiz
+          </button>
+          <button id="btnSaveAnswersToServer" class="btn btn-secondary">
+            <span>💾</span> Save Answer Sheet to Server
+          </button>
+          <button id="btnExportResultsJson" class="btn btn-secondary">
+            <span>📥</span> Download JSON Report
+          </button>
+          <button class="btn btn-secondary btn-back-to-quiz-menu">
+            <span>⬅️</span> Back to Menu
+          </button>
+        </div>
+
+        <!-- Detailed 1 to 10 Questions Breakdown -->
+        <h3 style="color:#fff; margin-bottom:1rem;">📝 1 to 10 Questions Answer Sheet</h3>
+        <div id="resultsQuestionsBreakdown" class="results-breakdown-list"></div>
+      </div>
+
+      <!-- SUB-VIEW D: 1 to 10 Questions Editor -->
+      <div id="questionEditorView" class="quiz-card" style="display:none;">
+        <div class="editor-top-bar">
+          <div>
+            <h2 style="color:#fff; font-size:1.4rem;">✏️ Manage & Edit Questions (1 to 10)</h2>
+            <p style="font-size:0.85rem; color:var(--text-muted);">Customize the 1 to 10 questions, choices, correct answers, and explanations.</p>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btnAddNewQuestion" class="btn btn-secondary">➕ Add Question</button>
+            <button id="btnResetDefaultQuestions" class="btn btn-secondary">🔄 Reset Default 10</button>
+            <button id="btnSaveAllQuestions" class="btn btn-primary-gradient">💾 Save All to Server</button>
+            <button class="btn btn-secondary btn-back-to-quiz-menu">⬅️ Back</button>
+          </div>
+        </div>
+
+        <div id="editorQuestionsList" class="editor-questions-list"></div>
+      </div>
+
+      <!-- SUB-VIEW E: Saved Answers History -->
+      <div id="answerHistoryView" class="quiz-card" style="display:none;">
+        <div class="editor-top-bar">
+          <div>
+            <h2 style="color:#fff; font-size:1.4rem;">📜 Saved Quiz Answers & Scores</h2>
+            <p style="font-size:0.85rem; color:var(--text-muted);">Past 1 to 10 question quiz attempts, scores, and answer sheets.</p>
+          </div>
+          <button class="btn btn-secondary btn-back-to-quiz-menu">⬅️ Back to Menu</button>
+        </div>
+
+        <div id="historySubmissionsList" class="history-list"></div>
+      </div>
+
+    </section>
+
+    <!-- SPACE 3: Dedicated Full Records Gallery View -->
+    <section id="gallerySection" class="gallery-full-container" style="display:none;">
+      <div class="gallery-header" style="margin-bottom:1.5rem;">
+        <div>
+          <h2 class="card-title" style="font-size:1.5rem;">
+            <span>📁</span> All Stored Video & Voice Records
+          </h2>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
+            Continuous 3-minute segmented recordings, CV telemetry, playback, and multi-channel sharing.
+          </p>
+        </div>
+      </div>
+      <div id="galleryFullGrid" class="records-grid"></div>
+    </section>
+
+  </main>
+
+  <!-- Video Playback Modal -->
+  <div id="playerModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 id="playerModalTitle" class="modal-title">▶ Recording Playback</h3>
+        <button id="btnClosePlayer" class="btn-close">&times;</button>
+      </div>
+      <div style="aspect-ratio: 16/9; background:#000; border-radius:10px; overflow:hidden;">
+        <video id="modalVideoPlayer" controls style="width:100%; height:100%; display:block;"></video>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-Channel Share Modal -->
+  <div id="shareModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="shareModalTitle" class="modal-title">🔗 Share Recording</h3>
+        <button id="btnCloseShare" class="btn-close">&times;</button>
+      </div>
+
+      <p style="font-size:0.85rem; color:var(--text-muted);">
+        Share this video and voice recording link directly to Email, WhatsApp, AI Bot, or anywhere on the web.
+      </p>
+
+      <div class="share-grid">
+        <!-- Email Share -->
+        <a id="shareEmailLink" href="#" target="_blank" class="share-btn email">
+          <div class="share-icon icon-email">✉️</div>
+          <div>
+            <div>Email</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">Send via Mail</div>
+          </div>
+        </a>
+
+        <!-- WhatsApp Share -->
+        <a id="shareWhatsAppLink" href="#" target="_blank" class="share-btn whatsapp">
+          <div class="share-icon icon-whatsapp">💬</div>
+          <div>
+            <div>WhatsApp</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">WhatsApp Web/App</div>
+          </div>
+        </a>
+
+        <!-- AI Bot Analysis & Share -->
+        <div onclick="window.shareManager.openAIModal(window.shareManager.currentRecordId); document.getElementById('shareModal').classList.remove('open');" class="share-btn ai-bot">
+          <div class="share-icon icon-ai">🤖</div>
+          <div>
+            <div>AI Bot</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">CV & AI Summary</div>
+          </div>
+        </div>
+
+        <!-- Native Web Share -->
+        <div id="btnWebShare" class="share-btn webshare">
+          <div class="share-icon icon-share">📲</div>
+          <div>
+            <div>Anywhere</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">Device Share Menu</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Direct Link Copy -->
+      <div style="margin-top:0.5rem;">
+        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.35rem;">Direct Link</label>
+        <div class="link-copy-box">
+          <input type="text" id="shareDirectUrl" class="link-input" readonly>
+          <button id="btnCopyLink" class="btn btn-secondary" style="padding:0.65rem 1rem;">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Bot & Computer Vision Report Modal -->
+  <div id="aiModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">🤖 AI Bot & CV Intelligence Report</h3>
+        <button id="btnCloseAI" class="btn-close">&times;</button>
+      </div>
+
+      <div id="aiReportContent"></div>
+
+      <div>
+        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.35rem;">AI Bot Prompt & Metadata</label>
+        <textarea id="aiPromptBox" rows="4" class="link-input" style="width:100%; resize:vertical; font-family:monospace;" readonly></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button id="btnCopyAIPrompt" class="btn btn-secondary">📋 Copy AI Prompt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--accent-rose);">🗑️ Delete Recording?</h3>
+      </div>
+      <p style="font-size:0.9rem; color:var(--text-muted);">
+        Are you sure you want to delete <strong id="deleteRecordTitle" style="color:#fff;"></strong>? This video and voice recording will be permanently deleted from storage.
+      </p>
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:0.5rem;">
+        <button id="btnCancelDelete" class="btn btn-secondary">Cancel</button>
+        <button id="btnConfirmDelete" class="btn" style="background:var(--accent-rose); color:#fff;">Delete Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script>
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `<span>⚡</span> ${message}`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+  </script>
+  <script src="/static/js/cv_processor.js"></script>
+  <script src="/static/js/recorder.js"></script>
+  <script src="/static/js/gallery.js"></script>
+  <script src="/static/js/share.js"></script>
+  <script src="/static/js/quiz_space.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.galleryManager = new GalleryManager();
+      window.shareManager = new ShareManager();
+      window.visionRecorder = new VisionRecorder();
+      window.quizSpaceManager = new QuizSpaceManager();
+    });
+  </script>
+</body>
+</html>
