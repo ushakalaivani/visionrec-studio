@@ -2,7 +2,8 @@
 
 > **High-Performance Computer Vision Video & Synchronized Voice Recorder with Interactive Quiz Space**  
 > Built with Computer Vision Engineering, Continuous 3-Minute Rolling Recording, Background Recording across Applications, Interactive 1-10 Question Shuffled Quiz with Voice Input & Answer Sheet Persistence, Local Storage Management, Deletion Control, and Multi-Channel Sharing (Email, WhatsApp, AI Bot, Web Share).
-
+## Git Practice
+Learning feature branches, commits, and pull requests.
 ---
 
 ## ✨ Key Features
