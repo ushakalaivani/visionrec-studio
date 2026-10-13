@@ -118,3 +118,12 @@ Execute the automated test suite:
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+
+## Git Workflow Practice
+
+- Create a feature branch before making changes.
+- Review changes with git diff.
+- Commit changes with a clear message.
+- Push the branch to GitHub.
+- Open a pull request and merge after reviewing.
